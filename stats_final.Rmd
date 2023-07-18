@@ -1,0 +1,465 @@
+---
+title: "NBA Salary Analysis"
+author: "Lukas Marmanis, Michael Boyle, Brandon Tang"
+date: "5/13/2022"
+output:
+  pdf_document: default
+  html_document: default
+  fontsize: 12pt
+---
+\pagenumbering{gobble}
+\pagenumbering{arabic}
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(knitr)
+library(readr)
+library(ggplot2)
+library(MASS)
+
+```
+
+# Introduction 
+
+[3]
+```{r variable define, include=FALSE}
+nba_2_ <- read_csv('C:/Code/Stat525/nba.csv')
+data <- nba_2_
+FG <- data$FG
+ FT <- data$FT
+ MP <- data$MP
+ PTS <- data$PTS
+ TOV <- data$TOV
+ Y <- data$Salary1920
+ Age <- data$Age
+GS <- data$GS
+ 
+```
+Can you predict how much a NBA player will sign a contract for based on their performance in the previous year? And if so, how accurately can it be done? Our report and model will look at a variety of statistics from the 2018-2019 as well as the signing salary of players for the 2019-2020 season. Our data includes 307 observations with 31 variables. Of these variables 1 is irrelevant for our analysis, that being the players name. All of this data was collected from[1][2], both of which are stat trackers and compilation websites for basketball. 
+
+Our response variable is the 2019-2020 season salary. There are several observations we tested in our model that did not get included in the final model. These are: Free throws made, Field goals made, and Minutes played. The observations that made it into the final model are: Age, Games started, Points scored, and Turnovers. Note that all statistics except age and games started are on a per game basis. In terms of outliers, while there were some data points that were somewhat outliers, they were not extreme, generally followed the trends, and did not distort the data in a meaningful way to warrant their exclusion.
+
+All rounded data will have 4 significant digits.
+
+[4]
+```{r table, include=FALSE}
+
+meanst <- c(mean(Y), mean(GS),mean(PTS), mean(TOV), mean(Age), mean(FG), mean(FT), mean(MP))
+Mean <- signif(meanst, 4)
+sdst <- c(sd(Y), sd(GS),sd(PTS), sd(TOV), sd(Age), sd(FG),sd(FT), sd(MP))
+Standard_Deviaton <- signif(sdst, 4)
+rabs <- function(rgabs) {
+ arange <- (max(rgabs) - min(rgabs))
+ return(arange)
+}
+rangest <- c(rabs(Y), rabs(GS),rabs(PTS), rabs(TOV), rabs(Age), rabs(FG),rabs(FT), rabs(MP))
+Range <- signif(rangest, 4)
+corst <- c(cor(Y,Y), cor(GS,Y),cor(PTS,Y), cor(TOV,Y), cor(Age,Y), cor(FG,Y),cor(FT,Y), cor(MP,Y))
+Correlation <- signif(corst, 4)
+Name <- c("Salary", "Games Started", "Points", "Turnovers", "Age", "Field Goals", "Free Throws", "Minutes Played")
+nba_data <- data.frame(Name, Mean, Standard_Deviaton,Range, Correlation )
+kable(nba_data[1:8,], caption = "Table 1")
+```
+# Methods/Results
+
+## Assumptions made
+1. Errors are normal
+2. Errors are independent
+3. The expected value of errors is 0
+4. The variance of errors is equal to the variance of the model
+5. The same model applies to all observations
+6. No predictors are excluded
+7. The model is linear in Beta 0 through Beta P-1
+
+[5]
+```{r Basic Model, include=FALSE}
+d <- data
+AGE <- d$Age
+G <- d$G
+GS <- d$GS
+MP <- d$MP
+FG <- d$FG
+FGP <- d$FGP
+TP <- d$ThreeP
+TPA <- d$ThreePA
+TPP <- d$ThreePP
+ToP <- d$TwoP
+ToPP <- d$TwoPP
+ToPA <- d$TwoPA
+eFGP <- d$eFGP
+FT <- d$FT
+FTP <- d$FTP
+ORB <- d$ORB
+DRB <- d$DRB
+TRB <- d$TRB
+AST <- d$AST
+STL <- d$STL
+BLK <- d$BLK
+TOV <- d$TOV
+PF <- d$PF
+PTS <- d$PTS
+NAME <- d$Name
+SAL20 <- d$Salary1920
+TM18 <- d$Tm1819
+POS <- d$Pos
+TM20 <- d$Tm1920
+#now that all variables are assigned we will make a regression model of them
+AGEln <- lm(SAL20 ~ AGE)
+ASTln <- lm(SAL20 ~ AST)
+BLKln <- lm(SAL20 ~ BLK)
+DRBln <- lm(SAL20 ~ DRB)
+DRBln <- lm(SAL20 ~ DRB)
+eFGPln <- lm(SAL20 ~ eFGP)
+FGln <- lm(SAL20 ~ FG)
+FGPln <- lm(SAL20 ~ FGP)
+FTln <- lm(SAL20 ~ FT)
+FTPln <- lm(SAL20 ~ FTP)
+Gln <- lm(SAL20 ~ G)
+GSln <- lm(SAL20 ~ GS)
+TRBln <- lm(SAL20 ~ TRB)
+TPPln <- lm(SAL20 ~ TPP)
+TPAln <- lm(SAL20 ~ TPA)
+TPln <- lm(SAL20 ~ TP)
+TOVln <- lm(SAL20 ~ TOV)
+ToPPln <- lm(SAL20 ~ ToPP)
+STLln <- lm(SAL20 ~ STL)
+PTSln <- lm(SAL20 ~ PTS)
+PFln <- lm(SAL20 ~ PF)
+ORBln <- lm(SAL20 ~ ORB)
+MPln <- lm(SAL20 ~ MP)
+#Now we group all the regression data together
+library(nlme)
+fullfits <- list(AGEln, ASTln, BLKln, DRBln, eFGPln, FGln, FGPln, FTln,
+FTPln, Gln, GSln, MPln, ORBln, PFln, PTSln, STLln, ToPPln, TOVln, TPAln,
+TPln, TRBln)
+fullfitr <- sapply(fullfits,function(x) summary(x)$r.squared)
+#Note that the outputs, in this case our r-squared values, are in the orderthat was input when they were grouped together, which is alphabetical
+fullfitr
+
+```
+This is all our r-squared values, which can give a quick indicator of which variables will
+help provide the best fit.The purpose of the r-squared value is to measure what percent of
+the error out regression model accounts for, meaning a higher value is better. Our initial
+analysis showed some interesting results. We found that the top 5 r-squared values for the
+covariates were FG(.51), FT(.43), MP(.41), PTS(.53), and TOV(.44), each having an rsquared value larger than .4. These values represent Field Goals Made, Free Throws Made,
+Minutes Played Per Game, Points per Game, and Turnovers per game. We will exclude other variables for the sake of a better adjusted R-squared, which penalizes variables that do not significantly improve the fit of the model.
+
+While we initially chose the five variables listed above, as stated in the introduction, our group chose to abandon several of them in favor of more independent variables
+
+[6]
+```{r summaries, echo=FALSE}
+linmod_full <- lm(Y ~ FG + FT + MP + PTS + TOV)
+print('Table 2')
+summary(linmod_full)
+Age <- data$Age
+GS <- data$GS
+linmod_4 <- lm(Y ~ GS + PTS + TOV + Age)
+print('Table 3')
+summary(linmod_4)
+```
+
+These two tables show the comparison between the original linear model and the revised model. Despite having less predictors, and predictors that initially appeared less powerful we have a greater adjusted R-squared. This is due to the three omitted variables being too similar to the points predictor. They performed well individually because they were essentially predictors of the points variable itself. When that variable was included, they became redundant, and not worth including in the model. Change in age is independent of basketball itself, making it a good predictor for our multiple model. Finally, while measuring a similar statistic, games started was found to be more powerful than minutes played, and rendered the latter as not significant. The best explanation for this is that minutes played has a correlation with points scored, while games started is an indicator of a team's confidence in a player. 
+
+Our final regression model was:
+Y =  -18095841 + 37232(GS) + 682382(PTS) + 2106420(TOV) + 636469(Age) + Ei
+
+
+[7]
+```{r adj, echo=FALSE}
+min_max_norm <- function(x) {
+(x - min(x)) / (max(x) - min(x))
+}
+nba_norm <- as.data.frame(lapply(data[-c(1, 3, 29, 30)], min_max_norm))
+Yn <- nba_norm$Salary1920
+PTSn <- nba_norm$PTS
+TOVn <- data$TOV
+Agen <- nba_norm$Age
+TOVn <- nba_norm$TOV
+GSn <- nba_norm$GS
+linmod_4n <- lm(Yn ~ GSn + PTSn + TOVn + Agen)
+print('Table 4')
+summary(linmod_4n)
+
+```
+This table is of the normalized values for the model, the better illustrate the importance of each variable
+[8]
+```{r regression, echo=FALSE}
+residuals <- linmod_4$residuals
+fitval <- linmod_4$fitted.values
+graph_data <- data.frame(fitval, residuals)
+print('Graph 1')
+ggplot(graph_data, aes(x = fitval, y = residuals)) +
+geom_point() +
+ggtitle('Residuals vs. Fitted Values') +
+ylab('Residuals') +
+xlab('Fitted Values')
+
+```
+Clearly identifiable from the graph is that the variance of the residuals is not constant and does increase as our expected salary increases. This means our model will be less accurate, the more a player makes or is expected to make.
+No we will try to analyze if this variance is the result of one of our variables, or as a result of the multiple put together, or is simply inherent to the data.
+
+[9]
+
+```{r  echo=FALSE, figures-side, fig.show="hold", out.width="50%"}
+graph_data <- data.frame(fitval, residuals, Age, GS, PTS, TOV)
+print('Graphs 2-5')
+ggplot(graph_data, aes(x = Age, y = residuals)) +
+     geom_point() +
+     ggtitle('Residuals vs. Age') +
+     ylab('Residuals') +
+     xlab('Age')
+ggplot(graph_data, aes(x = GS, y = residuals)) +
+     geom_point() +
+     ggtitle('Residuals vs. Games Started') +
+     ylab('Residuals') +
+     xlab('Games Started')
+ggplot(graph_data, aes(x = PTS, y =residuals)) +
+     geom_point() +
+     ggtitle('Residuals vs. Points') +
+     ylab('Residuals') +
+     xlab('Points')
+ggplot(graph_data, aes(x = TOV, y =residuals)) +
+     geom_point() +
+     ggtitle('Residuals vs. Turnovers') +
+     ylab('Residuals') +
+     xlab('Turnovers')
+```
+It seems that the inconsistency of the residuals comes from points (PTS) and turnovers (TOV). One transformation we could try is inverting while simultaneously performing other transformations, log, square, and so on. This might help our residuals have constant variance.
+[10]
+
+```{r echo=FALSE}
+bxcx <- boxcox(linmod_4)
+(lambda <- bxcx$x[which.max(bxcx$y)])
+bxlinmod_4 <- lm(((Y^lambda-1)/lambda) ~ GS + (PTS) + TOV + Age)
+bxresiduals <- bxlinmod_4$residuals
+bxfitval <- bxlinmod_4$fitted.values
+bxgraph_data <- data.frame(bxfitval, bxresiduals)
+print('Graph 6')
+ggplot(bxgraph_data, aes(x = bxfitval, y = bxresiduals)) +
+geom_point() +
+ggtitle('Residuals vs. Fitted Values') +
+ylab('Residuals') +
+xlab('Fitted Values')
+sqrt(mean((Y - fitted(linmod_4))^2))
+
+madework <- function(bbxy) {
+ fixby <- ((bbxy)*(lambda)+1)^(1/(lambda))
+  return(fixby) 
+ }
+
+madeworkvec <- Vectorize(madework, vectorize.args = "bbxy")
+
+
+
+sqrt(mean((Y - madeworkvec(fitted(bxlinmod_4)))^2))
+```
+
+The two values above are the RMSE of the original model and the transformed model. The graph is also of the transformed model. As seen in both the numbers and the graph, using a Box Cox transformation we are able to slightly reduce the RMSE, but there is still a violation of assumptions we are unable to account for.
+
+# Conclusion
+
+Making a model to predict NBA player salaries based on their performance in a season is difficult. While we were able to account for over 50% of the residuals seen, there was still a good deal the model could not predict. This is for several reasons. Salaries are not renegotiated annually, so a year's performance does not always interact with a players salary. Teams in larger cities get more money to pay their players so worse players can be afforded larger contracts with those teams. A player's individual marketability plays a huge role in their salary as well, and this is a factor we really cant see in the data. Given what we found, we cannot say that a player's performance one year can be used to accurately predict their salary in the following year.
+
+
+
+# Documentation
+
+
+Libraries used
+```{r pressure, echo=FALSE}
+library(knitr)
+library(readr)
+library(ggplot2)
+library(MASS)
+
+```
+
+### In text references:
+
+[1] https://www.basketball-reference.com/contracts/players.html
+
+[2] https://www.basketball-reference.com/leagues/NBA_2019_per_game.html
+
+### Hidden code:
+```{r echo = T, results = 'hide',  fig.show="hold", out.width="50%"}
+#[3]
+nba_2_ <- read_csv('C:/Code/Stat525/nba.csv')
+data <- nba_2_
+FG <- data$FG
+ FT <- data$FT
+ MP <- data$MP
+ PTS <- data$PTS
+ TOV <- data$TOV
+ Y <- data$Salary1920
+ Age <- data$Age
+GS <- data$GS
+
+#[4]
+meanst <- c(mean(Y), mean(GS),mean(PTS), mean(TOV), mean(Age), mean(FG), mean(FT), mean(MP))
+Mean <- signif(meanst, 4)
+sdst <- c(sd(Y), sd(GS),sd(PTS), sd(TOV), sd(Age), sd(FG),sd(FT), sd(MP))
+Standard_Deviaton <- signif(sdst, 4)
+rabs <- function(rgabs) {
+ arange <- (max(rgabs) - min(rgabs))
+ return(arange)
+}
+rangest <- c(rabs(Y), rabs(GS),rabs(PTS), rabs(TOV), rabs(Age), rabs(FG),rabs(FT), rabs(MP))
+Range <- signif(rangest, 4)
+corst <- c(cor(Y,Y), cor(GS,Y),cor(PTS,Y), cor(TOV,Y), cor(Age,Y), cor(FG,Y),cor(FT,Y), cor(MP,Y))
+Correlation <- signif(corst, 4)
+Name <- c("Salary", "Games Started", "Points", "Turnovers", "Age", "Field Goals", "Free Throws", "Minutes Played")
+nba_data <- data.frame(Name, Mean, Standard_Deviaton,Range, Correlation )
+kable(nba_data[1:8,], caption = "Table 1")
+
+#[5]
+d <- data
+AGE <- d$Age
+G <- d$G
+GS <- d$GS
+MP <- d$MP
+FG <- d$FG
+FGP <- d$FGP
+TP <- d$ThreeP
+TPA <- d$ThreePA
+TPP <- d$ThreePP
+ToP <- d$TwoP
+ToPP <- d$TwoPP
+ToPA <- d$TwoPA
+eFGP <- d$eFGP
+FT <- d$FT
+FTP <- d$FTP
+ORB <- d$ORB
+DRB <- d$DRB
+TRB <- d$TRB
+AST <- d$AST
+STL <- d$STL
+BLK <- d$BLK
+TOV <- d$TOV
+PF <- d$PF
+PTS <- d$PTS
+NAME <- d$Name
+SAL20 <- d$Salary1920
+TM18 <- d$Tm1819
+POS <- d$Pos
+TM20 <- d$Tm1920
+#now that all variables are assigned we will make a regression model of them
+AGEln <- lm(SAL20 ~ AGE)
+ASTln <- lm(SAL20 ~ AST)
+BLKln <- lm(SAL20 ~ BLK)
+DRBln <- lm(SAL20 ~ DRB)
+DRBln <- lm(SAL20 ~ DRB)
+eFGPln <- lm(SAL20 ~ eFGP)
+FGln <- lm(SAL20 ~ FG)
+FGPln <- lm(SAL20 ~ FGP)
+FTln <- lm(SAL20 ~ FT)
+FTPln <- lm(SAL20 ~ FTP)
+Gln <- lm(SAL20 ~ G)
+GSln <- lm(SAL20 ~ GS)
+TRBln <- lm(SAL20 ~ TRB)
+TPPln <- lm(SAL20 ~ TPP)
+TPAln <- lm(SAL20 ~ TPA)
+TPln <- lm(SAL20 ~ TP)
+TOVln <- lm(SAL20 ~ TOV)
+ToPPln <- lm(SAL20 ~ ToPP)
+STLln <- lm(SAL20 ~ STL)
+PTSln <- lm(SAL20 ~ PTS)
+PFln <- lm(SAL20 ~ PF)
+ORBln <- lm(SAL20 ~ ORB)
+MPln <- lm(SAL20 ~ MP)
+#Now we group all the regression data together
+library(nlme)
+fullfits <- list(AGEln, ASTln, BLKln, DRBln, eFGPln, FGln, FGPln, FTln,
+FTPln, Gln, GSln, MPln, ORBln, PFln, PTSln, STLln, ToPPln, TOVln, TPAln,
+TPln, TRBln)
+fullfitr <- sapply(fullfits,function(x) summary(x)$r.squared)
+#Note that the outputs, in this case our r-squared values, are in the orderthat was input when they were grouped together, which is alphabetical
+fullfitr
+
+#[6]
+linmod_full <- lm(Y ~ FG + FT + MP + PTS + TOV)
+print('Table 2')
+summary(linmod_full)
+Age <- data$Age
+GS <- data$GS
+linmod_4 <- lm(Y ~ GS + PTS + TOV + Age)
+print('Table 3')
+summary(linmod_4)
+
+#[7]
+min_max_norm <- function(x) {
+(x - min(x)) / (max(x) - min(x))
+}
+nba_norm <- as.data.frame(lapply(data[-c(1, 3, 29, 30)], min_max_norm))
+Yn <- nba_norm$Salary1920
+PTSn <- nba_norm$PTS
+TOVn <- data$TOV
+Agen <- nba_norm$Age
+TOVn <- nba_norm$TOV
+GSn <- nba_norm$GS
+linmod_4n <- lm(Yn ~ GSn + PTSn + TOVn + Agen)
+print('Table 4')
+summary(linmod_4n)
+
+#[8]
+residuals <- linmod_4$residuals
+fitval <- linmod_4$fitted.values
+graph_data <- data.frame(fitval, residuals)
+print('Graph 1')
+
+ggplot(graph_data, aes(x = fitval, y = residuals)) +
+geom_point() +
+ggtitle('Residuals vs. Fitted Values') +
+ylab('Residuals') +
+xlab('Fitted Values')
+
+#[9]
+
+graph_data <- data.frame(fitval, residuals, Age, GS, PTS, TOV)
+print('Graphs 2-5')
+ggplot(graph_data, aes(x = Age, y = residuals)) +
+     geom_point() +
+     ggtitle('Residuals vs. Age') +
+     ylab('Residuals') +
+     xlab('Age')
+ggplot(graph_data, aes(x = GS, y = residuals)) +
+     geom_point() +
+     ggtitle('Residuals vs. Games Started') +
+     ylab('Residuals') +
+     xlab('Games Started')
+ggplot(graph_data, aes(x = PTS, y =residuals)) +
+     geom_point() +
+     ggtitle('Residuals vs. Points') +
+     ylab('Residuals') +
+     xlab('Points')
+ggplot(graph_data, aes(x = TOV, y =residuals)) +
+     geom_point() +
+     ggtitle('Residuals vs. Turnovers') +
+     ylab('Residuals') +
+     xlab('Turnovers')
+
+
+#[10]
+bxcx <- boxcox(linmod_4)
+(lambda <- bxcx$x[which.max(bxcx$y)])
+bxlinmod_4 <- lm(((Y^lambda-1)/lambda) ~ GS + (PTS) + TOV + Age)
+bxresiduals <- bxlinmod_4$residuals
+bxfitval <- bxlinmod_4$fitted.values
+bxgraph_data <- data.frame(bxfitval, bxresiduals)
+print('Graph 6')
+ggplot(bxgraph_data, aes(x = bxfitval, y = bxresiduals)) +
+geom_point() +
+ggtitle('Residuals vs. Fitted Values') +
+ylab('Residuals') +
+xlab('Fitted Values')
+sqrt(mean((Y - fitted(linmod_4))^2))
+
+madework <- function(bbxy) {
+ fixby <- ((bbxy)*(lambda)+1)^(1/(lambda))
+  return(fixby) 
+ }
+
+madeworkvec <- Vectorize(madework, vectorize.args = "bbxy")
+
+
+
+sqrt(mean((Y - madeworkvec(fitted(bxlinmod_4)))^2))
+```
